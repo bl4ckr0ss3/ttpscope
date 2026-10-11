@@ -1,0 +1,17 @@
+TTPscope is an independent open-source project and is not affiliated with,
+sponsored by, or endorsed by The MITRE Corporation.
+
+MITRE ATT&CK® and ATT&CK® are registered trademarks of The MITRE Corporation.
+
+ATT&CK data is distributed separately under MITRE's ATT&CK Terms of Use:
+https://attack.mitre.org/resources/terms-of-use/
+
+When ATT&CK material is reproduced or distributed, MITRE requires the
+following designation and license notice to be reproduced:
+
+© 2026 The MITRE Corporation. This work is reproduced and distributed with
+the permission of The MITRE Corporation.
+
+The application source code is licensed under the MIT License found in
+LICENSE. That license does not replace or alter the terms applying to ATT&CK
+data downloaded by the application.

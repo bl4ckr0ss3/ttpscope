@@ -1,0 +1,45 @@
+.TH TTPSCOPE 1 "October 2026" "TTPscope 0.1.0" "User Commands"
+.SH NAME
+ttpscope \- terminal research and study client for MITRE ATT&CK
+.SH SYNOPSIS
+.B ttpscope
+.IR command " [arguments]"
+.SH DESCRIPTION
+TTPscope synchronizes the Enterprise ATT&CK STIX bundle and provides offline
+search, relationship exploration, matrix rendering, personal notes, and an
+interactive terminal interface.
+.SH COMMANDS
+.TP
+.B sync
+Download and validate the current Enterprise ATT&CK STIX bundle.
+.TP
+.BI import " FILE"
+Validate and install a local STIX bundle.
+.TP
+.BI search " QUERY"
+Search object identifiers, names, aliases, and descriptions.
+.TP
+.BI show " ID"
+Show an ATT&CK object and its incoming and outgoing relationships.
+.TP
+.BI matrix " [--platform NAME]"
+Render the Enterprise matrix, optionally filtered by platform.
+.TP
+.BI note " ID TEXT"
+Append a timestamped Markdown research note.
+.TP
+.BI notes " ID"
+Print notes associated with an object.
+.TP
+.B tui
+Open the interactive ncurses browser.
+.SH FILES
+.TP
+.I $XDG_CACHE_HOME/ttpscope/enterprise-attack.json
+Cached STIX dataset. Defaults to ~/.cache when XDG_CACHE_HOME is unset.
+.TP
+.I $XDG_DATA_HOME/ttpscope/notes/
+Research notes. Defaults to ~/.local/share when XDG_DATA_HOME is unset.
+.SH TRADEMARKS
+MITRE ATT&CK and ATT&CK are registered trademarks of The MITRE Corporation.
+TTPscope is an independent project and is not endorsed by MITRE.
