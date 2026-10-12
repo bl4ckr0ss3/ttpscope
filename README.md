@@ -71,10 +71,17 @@ version, and back up.
 | Key | Action |
 | --- | --- |
 | `/` or `s` | Edit search filter |
-| `j` / `k` or arrows | Move selection |
-| Page Up / Page Down | Move by ten rows |
+| `j` / `k` or arrows | Move selection (or scroll the detail pane) |
+| Page Up / Page Down | Move by ten rows (or scroll the detail pane) |
+| Tab, `<` / `>` | Move focus between the list and the detail pane |
+| Mouse wheel | Scroll the focused pane |
+| Mouse click | Select a row / focus the detail pane |
 | `g` / `G` | First / last result |
 | `q` | Quit |
+
+The detail pane keeps its own scroll position: once a description is taller
+than the pane, focus it (the divider turns cyan) and scroll it
+independently of the list.
 
 The browser reads ATT&CK descriptions comfortably: links render as
 underlined labels, citations are demoted to dim `[source]` markers, and
