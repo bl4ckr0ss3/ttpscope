@@ -1,5 +1,9 @@
 # TTPscope
 
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Language](https://img.shields.io/badge/C-C17-A8B9D6?logo=c&logoColor=white)
+![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macOS-lightgrey)
+![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen)
 TTPscope is a fast, offline-first terminal research and study client for
 MITRE ATT&CK®. It combines a scriptable command-line interface, a responsive
 matrix renderer, relationship exploration, personal notes, and an interactive
