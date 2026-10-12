@@ -13,6 +13,7 @@ add_library(ttpscope_core
     src/json.c
     src/model.c
     src/paths.c
+    src/rich.c
     src/render.c
     src/stix.c
     src/sync.c
@@ -41,4 +42,8 @@ if(BUILD_TESTING)
     target_compile_definitions(test_stix PRIVATE FIXTURE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/minimal.json")
     target_link_libraries(test_stix PRIVATE ttpscope_core)
     add_test(NAME stix COMMAND test_stix)
+
+    add_executable(test_render tests/test_render.c)
+    target_link_libraries(test_render PRIVATE ttpscope_core)
+    add_test(NAME render COMMAND test_render)
 endif()

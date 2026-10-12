@@ -1,9 +1,13 @@
 #include "ttpscope/tui.h"
+#include "ttpscope/rich.h"
 
 #include <curses.h>
 #include <locale.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
+#define RICH_CAP 16384
 
 static void line_text(int row, int column, int width, const char *text, int attributes) {
     if (text == NULL || width <= 0) return;
@@ -12,27 +16,57 @@ static void line_text(int row, int column, int width, const char *text, int attr
     attroff(attributes);
 }
 
-static void wrap_text(int row, int column, int height, int width, const char *text) {
-    if (text == NULL) return;
+static int attr_for(unsigned char a) {
+    if (a == RICH_ATTR_LINK) return COLOR_PAIR(2) | A_UNDERLINE;
+    if (a == RICH_ATTR_DIM) return A_DIM;
+    return A_NORMAL;
+}
+
+/* Word-wrap rich text: blank line on paragraph breaks, per-character
+ * attributes preserved across wrapping (links keep their style mid-line). */
+static void wrap_rich(int row, int column, int height, int width,
+                      const char *text, const unsigned char *attrs) {
+    if (text == NULL || width <= 0) return;
+    size_t n = strlen(text);
+    size_t i = 0;
     int y = row, x = 0;
-    const char *p = text;
-    while (*p && y < row + height) {
-        if (*p == '\n') { y++; x = 0; p++; continue; }
-        while (*p == ' ') p++;
-        const char *end = p;
-        while (*end && *end != ' ' && *end != '\n') end++;
-        int length = (int)(end - p);
-        if (x > 0 && x + 1 + length > width) { y++; x = 0; }
+    while (i < n && y < row + height) {
+        if (text[i] == '\n') {
+            y++; x = 0; i++;
+            if (i < n && text[i] == '\n') { y++; i++; } /* paragraph break */
+            continue;
+        }
+        while (i < n && text[i] == ' ') i++;
+        if (i >= n || text[i] == '\n') continue;
+        size_t start = i;
+        while (i < n && text[i] != ' ' && text[i] != '\n') i++;
+        size_t wlen = i - start;
+        if (x > 0 && x + 1 + (int)wlen > width) { y++; x = 0; }
         if (y >= row + height) break;
         if (x > 0) { mvaddch(y, column + x, ' '); x++; }
-        int available = width - x;
-        if (available > 0) mvaddnstr(y, column + x, p, length < available ? length : available);
-        x += length;
-        p = end;
+        size_t j = start;
+        while (j < i && y < row + height) {
+            unsigned char a = attrs[j];
+            size_t k = j;
+            while (k < i && attrs[k] == a) k++;
+            int avail = width - x;
+            if (avail <= 0) { y++; x = 0; continue; }
+            size_t len = k - j;
+            if (len > (size_t)avail) len = (size_t)avail;
+            attron(attr_for(a));
+            mvaddnstr(y, column + x, text + j, (int)len);
+            attroff(attr_for(a));
+            x += (int)len;
+            j += len;
+            if (j < i) { y++; x = 0; } /* run truncated by the edge */
+        }
     }
 }
 
 static void draw(const AttackDb *db, const AttackObject **results, size_t count, size_t selected, const char *query, bool editing) {
+    static char rich[RICH_CAP];
+    static unsigned char rich_attrs[RICH_CAP];
+    (void)db;
     erase();
     int rows, cols;
     getmaxyx(stdscr, rows, cols);
@@ -41,16 +75,24 @@ static void draw(const AttackDb *db, const AttackObject **results, size_t count,
     mvhline(0, 0, ' ', cols);
     mvaddnstr(0, 1, "TTPscope · MITRE ATT&CK research", cols - 2);
     attroff(COLOR_PAIR(1) | A_BOLD);
-    mvprintw(1, 1, "%zu objects  / search  j/k move  PgUp/PgDn jump  q quit", count);
+    char objects[32];
+    int nobjects = snprintf(objects, sizeof(objects), "%zu objects", count);
+    mvaddnstr(1, 1, objects, nobjects);
+    attron(A_DIM);
+    mvaddstr(1, 1 + nobjects, "   / search   j/k move   PgUp/PgDn jump   g/G ends   q quit");
+    attroff(A_DIM);
     mvhline(2, 0, ACS_HLINE, cols);
     size_t visible = rows > 5 ? (size_t)(rows - 5) : 0;
     size_t top = selected >= visible && visible > 0 ? selected - visible + 1 : 0;
     for (int y = 3; y < rows - 2 && top + (size_t)(y - 3) < count; y++) {
         size_t index = top + (size_t)(y - 3);
         const AttackObject *o = results[index];
-        char label[1024];
-        snprintf(label, sizeof(label), "%-12s %s", o->attack_id ? o->attack_id : attack_kind_name(o->kind), o->name ? o->name : "");
-        line_text(y, 1, left - 2, label, index == selected ? A_REVERSE : A_NORMAL);
+        char idbuf[16];
+        snprintf(idbuf, sizeof(idbuf), "%-12.12s", o->attack_id ? o->attack_id : attack_kind_name(o->kind));
+        int id_attr = index == selected ? A_REVERSE : (COLOR_PAIR(1) | A_DIM);
+        int name_attr = index == selected ? A_REVERSE : A_NORMAL;
+        line_text(y, 1, 12, idbuf, id_attr);
+        line_text(y, 13, left - 14, o->name ? o->name : "", name_attr);
     }
     if (cols >= 90) {
         mvvline(3, left, ACS_VLINE, rows - 5);
@@ -59,29 +101,60 @@ static void draw(const AttackDb *db, const AttackObject **results, size_t count,
             char title[1024];
             snprintf(title, sizeof(title), "%s%s%s", o->attack_id ? o->attack_id : "", o->attack_id ? " — " : "", o->name ? o->name : "");
             line_text(3, left + 2, cols - left - 3, title, A_BOLD);
-            mvprintw(5, left + 2, "Type: %s", attack_kind_name(o->kind));
-            if (o->platforms) mvaddnstr(6, left + 2, o->platforms, cols - left - 3);
-            if (o->tactics) mvaddnstr(7, left + 2, o->tactics, cols - left - 3);
-            wrap_text(9, left + 2, rows - 12, cols - left - 3, o->description);
+            char label[16];
+            attron(A_DIM);
+            snprintf(label, sizeof(label), "%-11.11s", "Type:");
+            mvaddstr(5, left + 2, label);
+            snprintf(label, sizeof(label), "%-11.11s", "Platforms:");
+            mvaddstr(6, left + 2, label);
+            snprintf(label, sizeof(label), "%-11.11s", "Tactics:");
+            mvaddstr(7, left + 2, label);
+            attroff(A_DIM);
+            mvaddstr(5, left + 13, attack_kind_name(o->kind));
+            if (o->platforms) mvaddnstr(6, left + 13, o->platforms, cols - left - 14);
+            if (o->tactics) mvaddnstr(7, left + 13, o->tactics, cols - left - 14);
+            rich_prepare(o->description ? o->description : "", rich, rich_attrs, RICH_CAP);
+            wrap_rich(9, left + 2, rows - 12, cols - left - 3, rich, rich_attrs);
         }
     }
     mvhline(rows - 2, 0, ACS_HLINE, cols);
-    mvprintw(rows - 1, 1, "%s%s", editing ? "Search: " : "Filter: ", query);
+    attron(A_DIM);
+    mvaddstr(rows - 1, 1, editing ? "Search: " : "Filter: ");
+    attroff(A_DIM);
+    mvaddstr(rows - 1, 9, query);
     if (editing) { curs_set(1); move(rows - 1, (int)strlen(query) + 9); } else curs_set(0);
     refresh();
-    (void)db;
 }
 
 int tui_run(const AttackDb *db) {
     setlocale(LC_ALL, "");
     if (initscr() == NULL) return 1;
     cbreak(); noecho(); keypad(stdscr, TRUE);
-    if (has_colors()) { start_color(); use_default_colors(); init_pair(1, COLOR_CYAN, -1); }
+    if (has_colors()) {
+        start_color(); use_default_colors();
+        init_pair(1, COLOR_CYAN, -1);
+        init_pair(2, COLOR_BLUE, -1);
+        init_pair(3, COLOR_YELLOW, -1);
+    }
     char query[256] = "";
+    const char *initial = getenv("TTPSCOPE_TUI_SELECT");
+    if (initial != NULL && initial[0] != '\0') {
+        snprintf(query, sizeof(query), "%.*s", (int)(sizeof(query) - 1), initial);
+    }
+    /* TTPSCOPE_TUI_QUIT_AFTER=N exits N seconds after startup: lets scripts
+     * capture screenshots or demos of the browser. */
+    const char *quit_after = getenv("TTPSCOPE_TUI_QUIT_AFTER");
+    time_t deadline = 0;
+    if (quit_after != NULL && quit_after[0] != '\0') {
+        deadline = time(NULL) + (time_t)atoi(quit_after);
+        halfdelay(2);
+    }
     const AttackObject **results = NULL;
     size_t count = attack_search(db, query, &results), selected = 0;
     bool editing = false, running = true;
     while (running) {
+        if (deadline != 0 && time(NULL) >= deadline) running = false;
+        if (!running) break;
         draw(db, results, count, selected, query, editing);
         int key = getch();
         if (editing) {
