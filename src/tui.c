@@ -89,8 +89,8 @@ static void draw(const AttackDb *db, const AttackObject **results, size_t count,
         const AttackObject *o = results[index];
         char idbuf[16];
         snprintf(idbuf, sizeof(idbuf), "%-12.12s", o->attack_id ? o->attack_id : attack_kind_name(o->kind));
-        int id_attr = index == selected ? A_REVERSE : (COLOR_PAIR(1) | A_DIM);
-        int name_attr = index == selected ? A_REVERSE : A_NORMAL;
+        int id_attr = index == selected ? A_REVERSE : (COLOR_PAIR(1) | A_BOLD);
+        int name_attr = index == selected ? (A_REVERSE | A_BOLD) : A_NORMAL;
         line_text(y, 1, 12, idbuf, id_attr);
         line_text(y, 13, left - 14, o->name ? o->name : "", name_attr);
     }
@@ -100,7 +100,8 @@ static void draw(const AttackDb *db, const AttackObject **results, size_t count,
             const AttackObject *o = results[selected];
             char title[1024];
             snprintf(title, sizeof(title), "%s%s%s", o->attack_id ? o->attack_id : "", o->attack_id ? " — " : "", o->name ? o->name : "");
-            line_text(3, left + 2, cols - left - 3, title, A_BOLD);
+            line_text(3, left + 2, cols - left - 3, title, A_BOLD | COLOR_PAIR(1));
+            mvhline(4, left + 2, ACS_HLINE, cols - left - 4);
             char label[16];
             attron(A_DIM);
             snprintf(label, sizeof(label), "%-11.11s", "Type:");
@@ -111,8 +112,8 @@ static void draw(const AttackDb *db, const AttackObject **results, size_t count,
             mvaddstr(7, left + 2, label);
             attroff(A_DIM);
             mvaddstr(5, left + 13, attack_kind_name(o->kind));
-            if (o->platforms) mvaddnstr(6, left + 13, o->platforms, cols - left - 14);
-            if (o->tactics) mvaddnstr(7, left + 13, o->tactics, cols - left - 14);
+            if (o->platforms) { attron(COLOR_PAIR(3)); mvaddnstr(6, left + 13, o->platforms, cols - left - 14); attroff(COLOR_PAIR(3)); }
+            if (o->tactics) { attron(COLOR_PAIR(3)); mvaddnstr(7, left + 13, o->tactics, cols - left - 14); attroff(COLOR_PAIR(3)); }
             rich_prepare(o->description ? o->description : "", rich, rich_attrs, RICH_CAP);
             wrap_rich(9, left + 2, rows - 12, cols - left - 3, rich, rich_attrs);
         }
@@ -135,6 +136,7 @@ int tui_run(const AttackDb *db) {
         init_pair(1, COLOR_CYAN, -1);
         init_pair(2, COLOR_BLUE, -1);
         init_pair(3, COLOR_YELLOW, -1);
+        init_pair(4, COLOR_GREEN, -1);
     }
     char query[256] = "";
     const char *initial = getenv("TTPSCOPE_TUI_SELECT");
