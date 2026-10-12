@@ -5,6 +5,8 @@ MITRE ATT&CK®. It combines a scriptable command-line interface, a responsive
 matrix renderer, relationship exploration, personal notes, and an interactive
 ncurses browser in one C executable.
 
+<img src="assets/demo.gif" width="877" alt="TTPscope demo: search, Enterprise matrix, group and technique views">
+
 > TTPscope is an independent project. It is not affiliated with, sponsored by,
 > or endorsed by The MITRE Corporation.
 
