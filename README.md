@@ -77,6 +77,13 @@ version, and back up.
 | `g` / `G` | First / last result |
 | `q` | Quit |
 
+The browser reads ATT&CK descriptions comfortably: links render as
+underlined labels, citations are demoted to dim `[source]` markers, and
+metadata labels are de-emphasized. Two environment hooks exist for
+scripted demos and screenshots: `TTPSCOPE_TUI_SELECT=<query>` starts the
+browser pre-filtered, and `TTPSCOPE_TUI_QUIT_AFTER=<seconds>` exits
+automatically.
+
 ## Data and attribution
 
 TTPscope downloads ATT&CK data from MITRE's official
